@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ms-MY">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Kemahiran Pemulihan: Operasi Bahagi (Pembelajaran)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { box-sizing: border-box; }
+    .activity-card { min-height: 400px; }
+    .number-card { transition: all .3s ease; cursor: pointer; }
+    .number-card:hover { transform: scale(1.05); }
+    .dragging { opacity: .5; transform: rotate(5deg); }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed #cbd5e1;
+      transition: all .3s ease;
+      min-width: 60px;
+      min-height: 60px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .drop-zone.drag-over { border-color: #3b82f6; background-color: #eff6ff; }
+
+    /* Salah */
+    @keyframes shake {
+      0% { transform: translateX(0); } 25% { transform: translateX(-5px); }
+      50% { transform: translateX(5px); } 75% { transform: translateX(-5px); }
+      100% { transform: translateX(0); }
+    }
+    .shake { animation: shake 0.5s ease; }
+
+    /* Zon sudah diisi */
+    .drop-zone-filled {
+      border-style: solid;
+      border-color: #4ade80;
+      background-color: #f0fdf4;
+    }
+
+    /* === GAYA LAMA & BARU UNTUK AKTIVITI BAHAGI === */
+    
+    /* Aktiviti 1: Pengongsian */
+    .mangkuk {
+      border: 3px solid #60a5fa; background: #eff6ff;
+      border-radius: 1rem; width: 100px; height: 100px;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      transition: all 0.3s ease;
+    }
+    .mangkuk.highlight { transform: scale(1.1); background: #dbeafe; border-color: #2563eb; }
+
+    /* Aktiviti 2: Pengumpulan */
+    .guli-drag {
+      width: 40px; height: 40px; background: #10b981; border: 2px solid #059669;
+      border-radius: 50%; display: flex; justify-content: center; align-items: center;
+      font-size: 1.1rem; font-weight: bold; color: white; cursor: move;
+    }
+    .kotak-kumpul {
+      border: 3px dashed #10b981; background: #f0fdfa;
+      width: 150px; height: 150px; border-radius: 1rem;
+      padding: 0.5rem;
+    }
+    .kotak-kumpul.drop-zone-filled {
+      background: #d1fae5; border-color: #059669; border-style: solid;
+    }
+
+    /* Aktiviti 3: Tolak Berulang */
+    .rambutan-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.5rem; }
+    .rambutan-icon {
+      font-size: 2.5rem; transition: all 0.5s ease;
+    }
+    .rambutan-icon.faded { opacity: 0.1; transform: scale(0.5); }
+
+    /* Aktiviti 4: Peneroka Sifir (BARU) */
+    .peneroka-grid {
+      display: grid;
+      gap: 4px; border: 2px solid #f97316; padding: 8px; 
+      max-width: 400px; min-height: 100px; margin: 1rem auto;
+      background: #fff7ed; border-radius: 8px;
+    }
+    .peneroka-blok {
+      height: 35px; background: #fb923c; border: 2px solid #ea580c;
+      border-radius: 4px;
+      transition: all 0.3s ease;
+    }
+    .peneroka-select {
+        font-size: 1.2rem; font-weight: bold; padding: 0.5rem;
+        border: 2px solid #fdba74; border-radius: 8px;
+    }
+
+    /* Aktiviti 5: Garis Nombor */
+    .garis-nombor-container {
+      position: relative; display: flex; justify-content: space-between;
+      height: 80px; border-bottom: 4px solid #6366f1;
+      padding: 0 10px; margin-top: 2rem;
+    }
+    .garis-nombor-tick {
+      display: flex; flex-direction: column; align-items: center;
+      position: relative; bottom: -8px;
+    }
+    .garis-nombor-tick span { font-weight: bold; }
+    .kanggaru {
+      position: absolute; bottom: 10px; left: 0;
+      font-size: 2.5rem;
+      transition: left 0.5s ease-in-out;
+    }
+
+  </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-purple-50 min-h-full">
+
+  <div class="bg-yellow-100 border-b-4 border-yellow-300 p-4 shadow-sm sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">📚</span>
+        <span id="info-text" class="text-lg font-semibold text-gray-800">
+          Pilih aktiviti untuk mula belajar operasi bahagi!
+        </span>
+      </div>
+      <button id="speak-btn"
+              class="bg-yellow-300 hover:bg-yellow-400 text-yellow-800 font-bold py-2 px-4 rounded-full text-xl transition-colors duration-200"
+              onclick="speakInfo()">
+        🔊
+      </button>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto p-6">
+    <div class="bg-white rounded-xl shadow-lg p-6 mb-6 activity-card flex items-center justify-center">
+      <div id="activity-content" class="text-center w-full">
+        <div class="py-16">
+          <div class="text-6xl mb-4">➗</div>
+          <h2 class="text-3xl font-bold text-gray-800 mb-4">
+            Kemahiran Pemulihan: Operasi Asas Bahagi
+          </h2>
+          <p class="text-xl text-gray-600 mb-8">
+            Pilih aktiviti di bawah untuk meneroka konsep bahagi.
+          </p>
+          <div class="text-4xl">👇</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg p-6">
+      <h3 class="text-2xl font-bold text-gray-800 mb-4 text-center">Pilih Aktiviti</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+        <button onclick="loadActivity(1)"
+                class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors duration-200">
+          🍉 1. Pengongsian
+        </button>
+        <button onclick="loadActivity(2)"
+                class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors duration-200">
+          📦 2. Pengumpulan
+        </button>
+        <button onclick="loadActivity(3)"
+                class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors duration-200">
+          ➖ 3. Tolak Berulang
+        </button>
+        <button onclick="loadActivity(4)"
+                class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors duration-200">
+          🔄 4. Peneroka Sifir
+        </button>
+        <button onclick="loadActivity(5)"
+                class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors duration-200">
+          🦘 5. Garis Nombor
+        </button>
+      </div>
+
+      <div class="flex justify-center gap-4">
+        <button onclick="clearActivity()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg text-lg transition-colors duration-200">
+          🧹 Bersih
+        </button>
+        <button onclick="nextActivity()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg text-lg transition-colors duration-200">
+          ➡️ Seterusnya
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentActivity = 0;
+    let ttsEnabled = false;
+    let currentInfo = "Pilih aktiviti untuk mula belajar operasi bahagi!";
+    let draggedElement = null;
+
+    // Pembolehubah state untuk setiap aktiviti
+    window.pengongsianState = {};
+    window.pengumpulanState = {};
+    window.tolakState = {};
+    window.garisState = {};
+
+    /* ====== TTS (Dikekalkan) ====== */
+    function speak(text) {
+      if (!ttsEnabled) return;
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      setTimeout(() => {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'ms-MY';
+        u.rate = 0.9; u.pitch = 1.05;
+        const voices = window.speechSynthesis.getVoices();
+        const ms = voices.find(v => v.lang === 'ms-MY' || v.lang?.startsWith('ms'));
+        if (ms) u.voice = ms;
+        window.speechSynthesis.speak(u);
+      }, 100);
+    }
+    function setInfo(text) { currentInfo = text; document.getElementById('info-text').textContent = text; }
+    function speakInfo() {
+      if (!ttsEnabled) {
+        ttsEnabled = true;
+        const btn = document.getElementById('speak-btn');
+        btn.classList.add('bg-green-300', 'hover:bg-green-400');
+        btn.classList.remove('bg-yellow-300', 'hover:bg-yellow-400');
+      }
+      speak(currentInfo);
+    }
+
+    /* ====== DnD helpers (Dikekalkan) ====== */
+    function dragStart(e) { draggedElement = e.target; e.target.classList.add('dragging'); }
+    function dragEnd(e) { e.target.classList.remove('dragging'); document.querySelectorAll('.drop-zone').forEach(z=>z.classList.remove('drag-over')); }
+    function allowDrop(e) { e.preventDefault(); if (e.currentTarget.classList.contains('drop-zone')) e.currentTarget.classList.add('drag-over'); }
+    function dragLeave(e) { if (e.currentTarget.classList.contains('drop-zone')) e.currentTarget.classList.remove('drag-over'); }
+
+    /* ====== Router (Dikemas kini) ====== */
+    function loadActivity(n) {
+      currentActivity = n;
+      const content = document.getElementById('activity-content');
+      if (n === 1) return loadPengongsianActivity(content);
+      if (n === 2) return loadPengumpulanActivity(content);
+      if (n === 3) return loadTolakBerulangActivity(content);
+      // FUNGSI AKTIVITI 4 DIUBAH
+      if (n === 4) return loadPenerokaSifirActivity(content);
+      if (n === 5) return loadGarisNomborActivity(content);
+    }
+
+    /* ====== Aktiviti 1: Pengongsian (Sama) ====== */
+    function loadPengongsianActivity(content) {
+      const infoMsg = "Jom kongsi 15 guli kepada 3 bekas. Tekan butang 'Agihkan 1'.";
+      setInfo(infoMsg);
+      window.pengongsianState = { guli: 15, mangkuk: [0, 0, 0], nextMangkuk: 0 };
+      
+      content.innerHTML = `
+        <h3 class="text-2xl font-bold text-blue-600 mb-4">🍉 1. Konsep Pengongsian</h3>
+        <p class="text-lg text-gray-700 mb-4">Agihkan 15 guli sama rata kepada 3 bekas.</p>
+        <div class="bg-blue-50 p-4 rounded-lg mb-6">
+          <h4 class="text-xl font-semibold text-blue-800">Longgokan Guli</h4>
+          <div id="guli-longgok-paparan" class="text-4xl font-bold text-blue-700">${window.pengongsianState.guli}</div>
+        </div>
+        <div id="bekas-container" class="flex flex-wrap justify-center gap-4 mb-6">
+          ${[1, 2, 3].map(i => `
+            <div id="mangkuk-${i-1}" class="mangkuk">
+              <span class="font-bold text-blue-800">Bekas ${i}</span>
+              <span id="mangkuk-count-${i-1}" class="text-3xl font-bold text-blue-700">0</span>
+            </div>
+          `).join('')}
+        </div>
+        <button id="agih-btn" onclick="agihkanSatu()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-5 rounded-lg text-lg">
+          Agihkan 1 🍉
+        </button>
+        <div id="hasil-pengongsian" class="mt-4 text-xl font-semibold text-green-700"></div>
+      `;
+    }
+
+    function agihkanSatu() {
+      let state = window.pengongsianState;
+      if (state.guli === 0) return;
+      state.guli--;
+      document.getElementById('guli-longgok-paparan').textContent = state.guli;
+      let mangkukId = state.nextMangkuk;
+      state.mangkuk[mangkukId]++;
+      document.getElementById(`mangkuk-count-${mangkukId}`).textContent = state.mangkuk[mangkukId];
+      document.querySelectorAll('.mangkuk').forEach(m => m.classList.remove('highlight'));
+      const mangkukEl = document.getElementById(`mangkuk-${mangkukId}`);
+      mangkukEl.classList.add('highlight');
+      state.nextMangkuk = (state.nextMangkuk + 1) % 3;
+      if (state.guli === 0) {
+        document.getElementById('agih-btn').disabled = true;
+        document.getElementById('agih-btn').classList.add('opacity-50');
+        const msg = "Syabas! 15 guli telah dikongsi sama rata. Setiap bekas mendapat 5 guli. 15 ÷ 3 = 5";
+        document.getElementById('hasil-pengongsian').textContent = msg;
+        setInfo(msg); speak(msg);
+      } else {
+        const msg = `Guli diagih. Baki guli: ${state.guli}.`;
+        setInfo(msg);
+      }
+    }
+
+    /* ====== Aktiviti 2: Pengumpulan (Sama) ====== */
+    function loadPengumpulanActivity(content) {
+      const infoMsg = "Seret 12 guli ke dalam kotak untuk kumpulkan enam-enam.";
+      setInfo(infoMsg);
+      window.pengumpulanState = { guliTersedia: 12, kumpulan: 0, currentKotakCount: 0 };
+      
+      content.innerHTML = `
+        <h3 class="text-2xl font-bold text-green-600 mb-4">📦 2. Konsep Pengumpulan</h3>
+        <p class="text-lg text-gray-700 mb-4">Kumpul 12 guli secara enam-enam.</p>
+        <div class="mb-6">
+          <h4 class="text-lg font-semibold mb-3">Bakul Guli (Baki: <span id="guli-baki-count">12</span>)</h4>
+          <div id="guli-bakul" class="flex flex-wrap justify-center gap-3 p-4 bg-green-50 rounded-lg min-h-24">
+            ${Array(12).fill(0).map((_, i) => `
+              <div class="guli-drag" draggable="true" ondragstart="dragStart(event)" ondragend="dragEnd(event)" data-guli-id="${i+1}">
+                ${i+1}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div>
+          <h4 class="text-lg font-semibold mb-3">Zon Kumpulan (Kumpul 6 dalam 1 kotak)</h4>
+          <div id="zon-kumpulan" class="flex flex-wrap justify-center gap-4 p-4 min-h-40"></div>
+        </div>
+        <div id="hasil-pengumpulan" class="mt-4 text-xl font-semibold text-green-700"></div>
+      `;
+      tambahKotakKumpulBaru();
+    }
+    function tambahKotakKumpulBaru() {
+      const zon = document.getElementById('zon-kumpulan');
+      const kotakId = window.pengumpulanState.kumpulan + 1;
+      const kotakBaru = document.createElement('div');
+      kotakBaru.id = `kotak-${kotakId}`;
+      kotakBaru.className = 'kotak-kumpul drop-zone p-2';
+      kotakBaru.dataset.count = 0;
+      kotakBaru.dataset.limit = 6;
+      kotakBaru.innerHTML = `<span class="font-semibold text-green-800">Kotak ${kotakId}</span><div class="text-sm text-gray-600">Isi: 0 / 6</div>`;
+      kotakBaru.ondrop = dropOnKotak;
+      kotakBaru.ondragover = allowDrop;
+      kotakBaru.ondragleave = dragLeave;
+      zon.appendChild(kotakBaru);
+      window.pengumpulanState.kumpulan = kotakId;
+    }
+    function dropOnKotak(e) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('drag-over');
+      if (!draggedElement) return;
+      const kotak = e.currentTarget;
+      let count = parseInt(kotak.dataset.count);
+      const limit = parseInt(kotak.dataset.limit);
+      if (count >= limit) return; 
+      count++;
+      kotak.dataset.count = count;
+      kotak.querySelector('.text-sm').innerHTML = `Isi: ${count} / ${limit}`;
+      draggedElement.remove();
+      draggedElement = null;
+      let state = window.pengumpulanState;
+      state.guliTersedia--;
+      document.getElementById('guli-baki-count').textContent = state.guliTersedia;
+      setInfo(`Guli ditambah. Kotak ${state.kumpulan} ada ${count}.`);
+      if (count === limit) {
+        kotak.classList.add('drop-zone-filled');
+        kotak.classList.remove('drop-zone');
+        kotak.ondrop = null; 
+        if (state.guliTersedia > 0) {
+          setInfo(`Kotak ${state.kumpulan} penuh! Buka kotak baru.`);
+          tambahKotakKumpulBaru();
+        } else {
+          const msg = `Syabas! 12 guli telah dikumpul enam-enam. Anda dapat ${state.kumpulan} kumpulan. 12 ÷ 6 = ${state.kumpulan}`;
+          document.getElementById('hasil-pengumpulan').textContent = msg;
+          setInfo(msg); speak(msg);
+        }
+      }
+    }
+
+    /* ====== Aktiviti 3: Tolak Berulang (Sama) ====== */
+    function loadTolakBerulangActivity(content) {
+      const infoMsg = "Jom lakukan tolak 3 berulang kali daripada 18.";
+      setInfo(infoMsg);
+      window.tolakState = { baki: 18, tolakan: 0, jumlahAsal: 18 };
+      
+      content.innerHTML = `
+        <h3 class="text-2xl font-bold text-purple-600 mb-4">➖ 3. Konsep Tolak Berturut-turut</h3>
+        <p class="text-lg text-gray-700 mb-4">Tolak 3 daripada 18 sehingga baki menjadi 0.</p>
+        <div class="rambutan-grid mb-6 max-w-sm mx-auto">
+          ${Array(18).fill(0).map((_, i) => `<span id="rambutan-${i}" class="rambutan-icon">🍓</span>`).join('')}
+        </div>
+        <div class="flex items-center justify-center gap-6 mb-6">
+          <div class="text-center">
+            <div class="text-sm text-gray-500">Baki Semasa</div>
+            <div id="baki-semasa" class="text-6xl font-bold text-purple-700">${window.tolakState.baki}</div>
+          </div>
+          <button id="tolak-btn" onclick="tolakTiga()" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-5 rounded-lg text-lg">
+            Tolak 3
+          </button>
+          <div class="text-center">
+            <div class="text-sm text-gray-500">Bilangan Tolakan</div>
+            <div id="tolak-count" class="text-6xl font-bold text-purple-700">0</div>
+          </div>
+        </div>
+        <div id="hasil-tolak-berulang" class="mt-4 text-xl font-semibold text-green-700"></div>
+      `;
+    }
+    function tolakTiga() {
+      let state = window.tolakState;
+      if (state.baki === 0) return;
+      state.baki -= 3;
+      state.tolakan++;
+      document.getElementById('baki-semasa').textContent = state.baki;
+      document.getElementById('tolak-count').textContent = state.tolakan;
+      for (let i = 0; i < 3; i++) {
+        let index = state.jumlahAsal - (state.tolakan - 1) * 3 - 1 - i;
+        if (index >= 0) {
+          document.getElementById(`rambutan-${index}`).classList.add('faded');
+        }
+      }
+      setInfo(`Tolak 3. Baki ${state.baki}.`);
+      if (state.baki === 0) {
+        document.getElementById('tolak-btn').disabled = true;
+        document.getElementById('tolak-btn').classList.add('opacity-50');
+        const msg = `Selesai! Anda telah menolak 3 sebanyak ${state.tolakan} kali. 18 ÷ 3 = ${state.tolakan}`;
+        document.getElementById('hasil-tolak-berulang').textContent = msg;
+        setInfo(msg); speak(msg);
+      }
+    }
+
+    /* ====== Aktiviti 4: Peneroka Sifir (BARU) ====== */
+    function loadPenerokaSifirActivity(content) {
+      const infoMsg = "Pilih bilangan Baris dan Lajur. Lihat bagaimana darab dan bahagi berkait.";
+      setInfo(infoMsg);
+      
+      const createOptions = (max, start = 1) => {
+        let options = '';
+        for (let i = start; i <= max; i++) {
+          options += `<option value="${i}">${i}</option>`;
+        }
+        return options;
+      };
+
+      content.innerHTML = `
+        <h3 class="text-2xl font-bold text-orange-600 mb-4">🔄 4. Peneroka Sifir (Darab & Bahagi)</h3>
+        <p class="text-lg text-gray-700 mb-4">Bina susunan (array) anda sendiri untuk lihat kaitan darab dan bahagi.</p>
+        
+        <div class="flex justify-center gap-6 items-center mb-4">
+          <label class="font-semibold text-xl text-orange-900">
+            Baris: 
+            <select id="peneroka-baris" onchange="updatePenerokaSifir()" class="peneroka-select">
+              ${createOptions(5, 2)}
+            </select>
+          </label>
+          <span class="text-2xl font-bold text-orange-700">×</span>
+          <label class="font-semibold text-xl text-orange-900">
+            Lajur: 
+            <select id="peneroka-lajur" onchange="updatePenerokaSifir()" class="peneroka-select">
+              ${createOptions(6, 2)}
+            </select>
+          </label>
+        </div>
+
+        <div id="peneroka-grid-container" class="peneroka-grid">
+          </div>
+        
+        <div id="hasil-peneroka" class="mt-4 text-xl font-semibold text-orange-800 bg-orange-50 p-4 rounded-lg">
+          <div id="ayat-darab" class="mb-2">...</div>
+          <hr class="border-orange-200 my-2">
+          <div id="ayat-bahagi-1">...</div>
+          <div id="ayat-bahagi-2">...</div>
+        </div>
+      `;
+      
+      // Panggil sekali untuk paparan awal
+      updatePenerokaSifir();
+    }
+    
+    function updatePenerokaSifir() {
+      const baris = parseInt(document.getElementById('peneroka-baris').value);
+      const lajur = parseInt(document.getElementById('peneroka-lajur').value);
+      const hasil = baris * lajur;
+      
+      const gridContainer = document.getElementById('peneroka-grid-container');
+      const ayatDarab = document.getElementById('ayat-darab');
+      const ayatBahagi1 = document.getElementById('ayat-bahagi-1');
+      const ayatBahagi2 = document.getElementById('ayat-bahagi-2');
+      
+      // 1. Kemas kini Grid
+      gridContainer.innerHTML = ''; // Kosongkan grid
+      gridContainer.style.gridTemplateColumns = `repeat(${lajur}, 1fr)`;
+      for (let i = 0; i < hasil; i++) {
+        gridContainer.innerHTML += `<div class="peneroka-blok"></div>`;
+      }
+      
+      // 2. Kemas kini Ayat Matematik
+      const msgDarab = `Darab: ${baris} × ${lajur} = ${hasil}`;
+      const msgBahagi1 = `Bahagi 1: ${hasil} ÷ ${baris} = ${lajur}`;
+      const msgBahagi2 = `Bahagi 2: ${hasil} ÷ ${lajur} = ${baris}`;
+      
+      ayatDarab.textContent = msgDarab;
+      ayatBahagi1.textContent = msgBahagi1;
+      ayatBahagi2.textContent = msgBahagi2;
+      
+      // 3. Kemas kini Info Bar
+      const infoMsg = `${msgDarab}. Ini bermakna, ${msgBahagi1}, dan ${msgBahagi2}.`;
+      setInfo(infoMsg);
+      // speak(infoMsg); // Boleh diaktifkan jika mahu ia sebut setiap kali tukar
+    }
+
+
+    /* ====== Aktiviti 5: Garis Nombor (Sama) ====== */
+    function loadGarisNomborActivity(content) {
+      const infoMsg = "Bantu kanggaru lompat 3 unit sehingga sampai 12.";
+      setInfo(infoMsg);
+      window.garisState = { semasa: 0, lompatan: 0, sasaran: 12, lompat: 3 };
+      
+      const numTicks = window.garisState.sasaran + 1;
+      const ticks = Array(numTicks).fill(0).map((_, i) => i);
+      
+      content.innerHTML = `
+        <h3 class="text-2xl font-bold text-red-600 mb-4">🦘 5. Konsep Garis Nombor</h3>
+        <p class="text-lg text-gray-700 mb-4">Selesaikan: <span class="font-bold text-xl">12 ÷ 3 = ?</span></p>
+        
+        <div class="garis-nombor-container max-w-full mx-auto">
+          ${ticks.map(n => `
+            <div class="garis-nombor-tick">
+              <span>|</span>
+              <span>${n}</span>
+            </div>
+          `).join('')}
+          <div id="kanggaru" class="kanggaru">🦘</div>
+        </div>
+        
+        <div class="text-center mt-8">
+          <button id="lompat-btn" onclick="lompatGarisNombor()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-5 rounded-lg text-lg">
+            Lompat +3
+          </button>
+        </div>
+        
+        <div id="hasil-garis-nombor" class="mt-4 text-xl font-semibold text-green-700 text-center">
+          Bilangan Lompatan: <span id="lompat-count" class="font-bold text-2xl">0</span>
+        </div>
+      `;
+    }
+    
+    function lompatGarisNombor() {
+      let state = window.garisState;
+      if (state.semasa === state.sasaran) return;
+      
+      state.semasa += state.lompat;
+      state.lompatan++;
+      
+      document.getElementById('lompat-count').textContent = state.lompatan;
+      
+      const kanggaru = document.getElementById('kanggaru');
+      const peratusPergerakan = (state.semasa / state.sasaran) * 100;
+      kanggaru.style.left = `calc(${peratusPergerakan}% - 20px)`; 
+      
+      setInfo(`Lompatan ${state.lompatan}. Kanggaru di nombor ${state.semasa}.`);
+
+      if (state.semasa === state.sasaran) {
+        document.getElementById('lompat-btn').disabled = true;
+        document.getElementById('lompat-btn').classList.add('opacity-50');
+        const msg = `Syabas! Kanggaru perlukan ${state.lompatan} lompatan untuk sampai 12. 12 ÷ 3 = ${state.lompatan}`;
+        document.getElementById('hasil-garis-nombor').textContent = msg;
+        setInfo(msg); speak(msg);
+      }
+    }
+
+
+    /* ====== Kawalan Umum (Sama) ====== */
+    function clearActivity() {
+      currentActivity = 0;
+      document.getElementById('activity-content').innerHTML = `
+        <div class="text-center py-16">
+          <div class="text-6xl mb-4">➗</div>
+          <h2 class="text-3xl font-bold text-gray-800 mb-4">Kemahiran Pemulihan: Operasi Asas Bahagi</h2>
+          <p class="text-xl text-gray-600 mb-8">Pilih aktiviti di bawah untuk meneroka konsep bahagi.</p>
+          <div class="text-4xl">👇</div>
+        </div>
+      `;
+      setInfo("Pilih aktiviti untuk mula belajar operasi bahagi!");
+    }
+
+    function nextActivity() {
+      if (currentActivity === 0) return loadActivity(1);
+      if (currentActivity < 5) return loadActivity(currentActivity + 1);
+      return loadActivity(1); // Balik ke aktiviti 1
+    }
+
+    // Kekalkan TTS resume pada sesetengah pelayar
+    if ('speechSynthesis' in window) {
+      setInterval(() => { if (window.speechSynthesis.paused) window.speechSynthesis.resume(); }, 1000);
+    }
+  </script>
+</body>
+</html>
